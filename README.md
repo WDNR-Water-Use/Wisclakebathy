@@ -11,7 +11,7 @@ estimate lake volume at each contour interval, and perform simple analyses on
 how depth and volume are related at any given lake.
 
 For an example of how to use these functions, see the vignette
-["WI_Hypsography_Ex"]().
+["WI_Hypsography_Ex"](https://github.com/WDNR-Water-Use/Wisclakebathy/blob/main/vignettes/WI_Hypsography_Ex.Rmd).
 
 For descriptions of the assumptions and behavior of individual functions, see
-the [User Manual]().
+the [User Manual](https://github.com/WDNR-Water-Use/Wisclakebathy/blob/main/Wisclakebathy_1.0.0.pdf).
