@@ -1,7 +1,7 @@
 Package: Wisclakebathy
 Type: Package
 Title: Wisconsin Lake Bathymetry Calculations
-Version: 1.0.0
+Version: 1.1.0
 Author: Carolyn Voter <cvoter@wisc.edu>
 Maintainer: Carolyn Voter <cvoter@wisc.edu>
 Description: Calculations related to lake depth, area, and volume and changes in these values.
