@@ -7,7 +7,7 @@
 #' intervals in order to approximate lower lake volume.
 #'
 #'
-#' @param df data frame with information about "WBIC", "lakename", depth_feet",
+#' @param df data frame with information about "WBIC", "lake", depth_feet",
 #'           and "volume_acre_ft". Input data frame may have other columns, but
 #'           must have these.
 #' @param depth_change_ft Specify what reduction in lake depth from maximum
@@ -15,9 +15,9 @@
 #'
 #' @return data frame with the following columns:
 #' \item{WBIC}{Wisconsin Water Body Identification Code (WBIC) of lake}
-#' \item{lakename}{name of lake as included in the input data frame. Typically
-#'                 something like "easthorsehead", just to help with quick
-#'                 identification)}
+#' \item{lake}{name of lake as included in the input data frame. Typically
+#'             something like "easthorsehead", just to help with quick
+#'             identification)}
 #' \item{max_depth}{maximum lake depth (ft)}
 #' \item{max_vol}{lake volume corresponding to macimum lake depth (acre-ft)}
 #' \item{lower_depth}{lake depth assuming Xft reduction (as input, default is
@@ -37,7 +37,7 @@
 volume_loss_given_depth_change <- function(df, depth_change_ft = 1) {
 
   # Check that expected columns exist
-  expected_cols <- c("WBIC", "lakename", "depth_feet", "volume_acre_ft")
+  expected_cols <- c("WBIC", "lake", "depth_feet", "volume_acre_ft")
   if (sum(!expected_cols %in% colnames(df)) > 0) {
     stop(sprintf("Unexpected names in df. Expected: (%s). Read: (%s).",
                  str_c(expected_cols, collapse = ", "),
@@ -49,7 +49,7 @@ volume_loss_given_depth_change <- function(df, depth_change_ft = 1) {
   i <- 1
   for (WBIC in unique(df$WBIC)) {
     this_lake     <- df %>% filter(.data$WBIC == !!WBIC)
-    lakename      <- unique(this_lake$lakename)
+    lake          <- unique(this_lake$lake)
     max_depth     <- max(this_lake$depth_feet)
     max_vol       <- this_lake$volume_acre_ft[this_lake$depth_feet == max_depth]
     lower_depth   <- max_depth - depth_change_ft
@@ -59,7 +59,7 @@ volume_loss_given_depth_change <- function(df, depth_change_ft = 1) {
     vol_pcnt_loss <- 100*(max_vol - lower_vol)/max_vol
 
     reduction[[i]] <- data.frame(WBIC = WBIC,
-                                 lakename = lakename,
+                                 lake = lake,
                                  max_depth = max_depth,
                                  max_vol = max_vol,
                                  lower_depth = lower_depth,

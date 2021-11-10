@@ -7,7 +7,7 @@
 area_loss_given_depth_change(df, depth_change_ft = 1)
 }
 \arguments{
-\item{df}{data frame with information about "WBIC", "lakename", depth_feet",
+\item{df}{data frame with information about "WBIC", "lake", depth_feet",
 and "area_acres". Input data frame may have other columns, but
 must have these.}
 
@@ -17,9 +17,9 @@ lake depth to evaluate. Defaults to 1 (ft).}
 \value{
 data frame with the following columns:
 \item{WBIC}{Wisconsin Water Body Identification Code (WBIC) of lake}
-\item{lakename}{name of lake as included in the input data frame. Typically
-                something like "easthorsehead", just to help with quick
-                identification)}
+\item{lake}{name of lake as included in the input data frame. Typically
+            something like "easthorsehead", just to help with quick
+            identification)}
 \item{max_depth}{maximum lake depth (ft)}
 \item{max_area}{lake area corresponding to macimum lake depth (acres)}
 \item{lower_depth}{lake depth assuming Xft reduction (as input, default is

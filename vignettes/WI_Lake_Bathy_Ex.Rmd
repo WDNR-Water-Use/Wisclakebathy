@@ -1,0 +1,319 @@
+---
+title: "Wisconsin Lake Bathymetry Examples"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{WI_Lake_Bathy_Ex}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Setup 
+
+```{r eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+library(Wisclakebathy)
+library(dplyr)
+library(ggplot2)
+library(extrafont)
+```
+
+## Introduction
+
+The Wisclakebathy package was designed to help scientists at the Wisconsin DNR
+process and analyze lake bathymetry data for Wisconsin lakes. 
+
+<br>
+
+**Obtaining lake bathymetry information.** For many Wisconsin lakes, pdf maps of
+lake bathymetry are available [on the WDNR
+website](https://dnr.wi.gov/lakes/maps/).
+
+<br>
+
+**Obtaining lake depth vs. lake volume only.** Many of these maps have a lake
+depth vs. lake volume curve printed on the map, with the maximum lake depth,
+lake volume, and lake area noted in text. If this is the only information
+needed, it is relatively fast to use [DataThief](https://datathief.org/) to
+extract information from these curves. When using DataThief, first define the
+axis, then be sure that when you place the end point marker, the x,y values for
+that end point are less than or equal to the printed values for maximum depth
+and maximum volume. If not, adjust the axis definition. The functions in this
+package can process the raw DataThief results provided the results txt file is
+named appropriately and there is an accompanying csv file with the maximum lake
+depths and lake volumes noted. See full details about how to organize these
+files in the details of the `convert_data_thief_volumes` function (see entry in
+the User Manual for this package, or access the same help information by typing
+`?convert_data_thief_volumes` with the Wisclakebathy package installed). We do
+not recommend estimating lake depth vs. lake area from this lake depth vs. lake
+volume curve, as it is difficult to account for irregularly shaped lakes,
+particularly when there are multiple basins.
+
+<br>
+
+**Obtaining lake depth, lake area, and lake volume.** If there is no lake depth
+vs. lake volume curve provided or if lake depth vs. lake area information is
+also desired, it is best to instead use the approach of [Rounds et al.
+(2021)](https://conservancy.umn.edu/handle/11299/216182) and use
+[ImageJ](https://imagej.nih.gov/ij/download.html) to digitize the proportional
+area associated with depth contour intervals. See [their
+repository](https://conservancy.umn.edu/handle/11299/216182) for a helpful video
+describing this approach. The Wisclakebathy package can convert the depth vs.
+proportional areas into actual areas (acres) provided the csv files are named
+appropriately and there is an accompanying csv file with the maximum lake area
+noted. See full details about how to organize these files in the details of the
+`convert_proportion_areas` function (see entry in the User Manual for this
+package, or access the same help information by typing
+`?convert_proportion_areas` with the Wisclakebathy package installed). Lake
+depth vs. lake area information can then be converted to lake depth vs. lake
+volumes information using a trapezoidal or conic estimation approch with the
+function `calculate_volumes`.
+
+<br>
+
+**Using both approaches.** It is possible that an in-depth analysis of many
+lakes will lead to a mix of approaches, with lake depth vs. lake volume
+extracted using DataTheif for some lakes but ImageJ used to get lake depth vs.
+lake area for other lakes. In this case, it is probably best to maintain one
+summary csv file with the WBIC, (maximum) Depth_feet, (maximum) Area_acres, and
+(maximum) Volume_acre_ft for each lake that is evaluated using either approach.
+Missing information can be denoted in this summary file by (capitalized) NA.
+This file can be used as the `max_area_file` in the function
+`convert_proportion_areas` and the `maxes_file` in the
+`convert_data_thief_volumes`function - the functions will not be confused by the
+extra columns. Similarly, DataThief results can be stored in the same directory
+as ImageJ results - they will have the same naming pattern
+("singlelakename_WBIC"), but different file endings (.txt vs. .csv), so the
+functions will not get confused about which files to read.
+
+<br>
+
+## Example 1: Use DataThief to obtain lake depth vs. lake volume
+
+```{r eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Note: if knitting straight from vignette, paths must to be relative to
+# vignette directory. Otherwise, paths should be relative to project directory.
+
+# Process raw DataThief results
+lake_volumes <- convert_data_thief_volumes(path = "../data-raw/CS_DataThief",
+                                           max_file = "WI_maxes.csv",
+                                           flip = TRUE,
+                                           depth_interval = 3)
+
+# Calculate sensitivity of lake volume to changes in depth
+vol_loss_10pcnt <- depth_change_given_volume_loss(lake_volumes,
+                                                  pcnt_loss = 10)
+vol_depth_change_1ft <- volume_loss_given_depth_change(lake_volumes,
+                                                       depth_change_ft = 1)
+
+# Combine into summary data frame
+volume_changes <- full_join(vol_loss_10pcnt, vol_depth_change_1ft,
+                            by = c("WBIC", "lake", "max_depth", "max_vol")) %>%
+                  select(WBIC = .data$WBIC, 
+                         lake = .data$lake, 
+                         max_depth = .data$max_depth, 
+                         max_vol = .data$max_vol, 
+                         vol_pcnt_loss_1ft_depth = .data$vol_pcnt_loss, 
+                         depth_change_10pcnt_vol_loss = .data$depth_change)
+
+# Write out
+write.csv(lake_volumes, 
+          "../data-raw/CS_Bathymetry.csv", 
+          row.names = FALSE)
+write.csv(volume_changes, 
+          "../data-raw/CS_Bathymetry_volume_changes.csv", 
+          row.names = FALSE)
+```
+
+## Example 2: Use ImageJ to obtain lake depth, lake area, and lake volume
+
+```{r eval=TRUE, echo=TRUE, warning=FALSE, message=FALSE}
+# Note: if knitting straight from vignette, paths must to be relative to
+# vignette directory. Otherwise, paths should be relative to project directory.
+
+# Process raw ImageJ results
+lake_areas <- convert_proportion_areas(path = "../data-raw/Wisconsin_Hypsography",
+                                       max_area_file = "WI_areas.csv",
+                                       flip = TRUE)
+# Calculate lake volumes using trapezoidal approach (could instead use conical)
+lake_volumes          <- calculate_volumes(lake_areas, 
+                                           method = "trapezoidal")
+
+# Calculate sensitivity of lake volume and lake area to changes in depth 
+vol_loss_10pcnt       <- depth_change_given_volume_loss(lake_volumes,
+                                                        pcnt_loss = 10)
+vol_depth_change_1ft  <- volume_loss_given_depth_change(lake_volumes,
+                                                        depth_change_ft = 1)
+area_loss_10pcnt      <- depth_change_given_area_loss(lake_volumes,
+                                                      pcnt_loss = 10)
+area_depth_change_1ft <- area_loss_given_depth_change(lake_volumes,
+                                                      depth_change_ft = 1)
+
+# Combine into summary data frame
+volume_changes <- full_join(vol_loss_10pcnt, vol_depth_change_1ft,
+                            by = c("WBIC", "lake", "max_depth", "max_vol")) %>%
+                  select(WBIC = .data$WBIC, 
+                         lake = .data$lake, 
+                         max_depth = .data$max_depth, 
+                         max_vol = .data$max_vol, 
+                         vol_pcnt_loss_1ft_depth = .data$vol_pcnt_loss, 
+                         depth_change_10pcnt_vol_loss = .data$depth_change)
+area_changes  <- full_join(area_loss_10pcnt, area_depth_change_1ft,
+                           by = c("WBIC", "lake", "max_depth", "max_area")) %>%
+                 select(WBIC = .data$WBIC, 
+                        lake = .data$lake, 
+                        max_depth = .data$max_depth, 
+                        max_area = .data$max_area, 
+                        area_pcnt_loss_1ft_depth = .data$area_pcnt_loss, 
+                        depth_change_10pcnt_area_loss = .data$depth_change)
+volume_area_changes <- full_join(volume_changes, area_changes,
+                                 by = c("WBIC", "lake", "max_depth"))
+
+# To write out:
+write.csv(lake_volumes, 
+          "../data-raw/WI_Bathymetry.csv", 
+          row.names = FALSE)
+write.csv(volume_area_changes, 
+          "../data-raw/WI_Bathymetry_volume_area_changes.csv", 
+          row.names = FALSE)
+```
+
+### Visualize Lake Volume
+
+<br>
+
+**Change in Maximum Lake Depth with 10% Volume Loss**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$depth_change_10pcnt_vol_loss)) +
+            geom_histogram(binwidth = 0.1,
+                           position = "identity") +
+            labs(x = "Change in Lake Depth (ft)",
+                 y = "Number of Lakes") +
+            scale_x_continuous(minor_breaks = 0.1,
+                               expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```
+
+<br>
+
+**Change in Lake Volume with 1ft Drop in Maximum Lake Depth**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$vol_pcnt_loss_1ft_depth)) +
+            geom_histogram(binwidth = 1,
+                           position = "identity") +
+            labs(x = "Change in Lake Volume (%)",
+                 y = "Number of Lakes") +
+            scale_x_continuous(minor_breaks = 1,
+                               expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```
+
+<br>
+
+### Visualize Lake Area
+
+<br>
+
+**Change in Maximum Lake Depth with 10% Area Loss**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$depth_change_10pcnt_area_loss)) +
+            geom_histogram(binwidth = 0.1,
+                           position = "identity") +
+            labs(x = "Change in Lake Depth (ft)",
+                 y = "Number of Lakes") +
+            scale_x_continuous(minor_breaks = 0.1,
+                               expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```
+
+<br>
+
+**Change in Lake Area with 1ft Drop in Maximum Lake Depth**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$area_pcnt_loss_1ft_depth)) +
+            geom_histogram(binwidth = 1,
+                           position = "identity") +
+            labs(x = "Change in Lake Area (%)",
+                 y = "Number of Lakes") +
+            scale_x_continuous(minor_breaks = 1,
+                               expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```
+
+<br>
+
+### Compare Lake Volume vs. Lake Area Sensitivity
+
+<br>
+
+**Change Maximum Lake Depth with 10% Change in Lake Area vs. Lake Volume**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$depth_change_10pcnt_area_loss,
+                       y = .data$depth_change_10pcnt_vol_loss)) +
+            geom_abline(intercept = 0, 
+                        slope = 1,
+                        color = "black") +
+            geom_point(color = "grey70") +
+            labs(x = "Change in Lake Depth with\n10% Change in Lake Area (ft)",
+                 y = "Change in Lake Depth with\n10% Change in Lake Volume (ft)") +
+            scale_x_continuous(expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```
+
+<br>
+
+**Change in Lake Area vs. Lake Volume with 1ft Drop in Maximum Lake Depth**
+<br>
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, fig.width=4, fig.height=3}
+plot_obj <- ggplot(data = volume_area_changes,
+                   aes(x = .data$area_pcnt_loss_1ft_depth,
+                       y = .data$vol_pcnt_loss_1ft_depth)) +
+            geom_abline(intercept = 0, 
+                        slope = 1,
+                        color = "black") +
+            geom_point(color = "grey70") +
+            labs(x = "Change in Lake Area (%)",
+                 y = "Change in Lake Volume (%)") +
+            scale_x_continuous(expand = c(0,0)) +
+            scale_y_continuous(expand = c(0,0)) +
+            theme_bw() +
+            theme(text = element_text(family = "Segoe UI Semilight",
+                                      size = 12))
+
+plot_obj
+```

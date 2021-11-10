@@ -32,11 +32,11 @@
 #'
 #' @param path Path of directory containing all csv files with depth and
 #'             proportional area info (extracted from bathymetry maps using
-#'             imageJ). Defaults to "data-raw/Wisconsin_Hypsography". See
-#'             details in description about expected format of these csv files.
+#'             imageJ), e.g. "data-raw/Wisconsin_Hypsography". See Details about
+#'             expected format of these csv files.
 #' @param max_area_file Name of csv file with information about maximum areas of
-#'                      each lake. Defaults to "WI_areas.csv". See details in
-#'                      description about expected format of this csv file.
+#'                      each lake, e.g. "WI_areas.csv". See Details about
+#'                      expected format of this csv file.
 #' @param flip Indicates whether should flip depths so that the maximum depth
 #'             corresponds to the lake surface and a depth of zero corresponds
 #'             to the lake bottom (TRUE) or keep as-is, with a depth of zero
@@ -45,9 +45,9 @@
 #'
 #' @return a data frame with the following columns:
 #' \item{WBIC}{Wisconsin Water Body Identification Code (WBIC) of lake}
-#' \item{lakename}{name of lake as included in csv filename (will be a single
-#'                 word, e.g. "easthorsehead", just to help with quick
-#'                 identification)}
+#' \item{lake}{name of lake as included in csv filename (will be a single
+#'             word, e.g. "easthorsehead", just to help with quick
+#'             identification)}
 #' \item{depth_ft}{lake depth (ft)}
 #' \item{area_acres}{lake area at this lake depth (acres)}
 #'
@@ -59,8 +59,8 @@
 #'
 #' @export
 
-convert_proportion_areas <- function(path = "data-raw/Wisconsin_Hypsography",
-                                     max_area_file = "WI_areas.csv",
+convert_proportion_areas <- function(path,
+                                     max_area_file,
                                      flip = TRUE) {
 
   # Get filenames to read ------------------------------------------------------
@@ -117,7 +117,7 @@ convert_proportion_areas <- function(path = "data-raw/Wisconsin_Hypsography",
       # Just right - proceed!
       df$area_acres <- df$proportion_area*max_area
       df$WBIC       <- WBIC
-      df$lakename   <- lakename
+      df$lake       <- lakename
 
       # If desired, flip depths so that:
       # maximum value indicates lake surface, 0 indicates lake bottom
@@ -128,7 +128,7 @@ convert_proportion_areas <- function(path = "data-raw/Wisconsin_Hypsography",
 
       # Save results
       areas[[i]] <- df %>%
-                    select("WBIC", "lakename", "depth_feet", "area_acres")
+                    select("WBIC", "lake", "depth_feet", "area_acres")
       i <- i + 1
     }
   }

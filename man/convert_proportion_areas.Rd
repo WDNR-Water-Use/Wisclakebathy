@@ -4,21 +4,17 @@
 \alias{convert_proportion_areas}
 \title{Convert proportional area hypsography to areas in acres}
 \usage{
-convert_proportion_areas(
-  path = "data-raw/Wisconsin_Hypsography",
-  max_area_file = "WI_areas.csv",
-  flip = TRUE
-)
+convert_proportion_areas(path, max_area_file, flip = TRUE)
 }
 \arguments{
 \item{path}{Path of directory containing all csv files with depth and
 proportional area info (extracted from bathymetry maps using
-imageJ). Defaults to "data-raw/Wisconsin_Hypsography". See
-details in description about expected format of these csv files.}
+imageJ), e.g. "data-raw/Wisconsin_Hypsography". See Details about
+expected format of these csv files.}
 
 \item{max_area_file}{Name of csv file with information about maximum areas of
-each lake. Defaults to "WI_areas.csv". See details in
-description about expected format of this csv file.}
+each lake, e.g. "WI_areas.csv". See Details about
+expected format of this csv file.}
 
 \item{flip}{Indicates whether should flip depths so that the maximum depth
 corresponds to the lake surface and a depth of zero corresponds
@@ -29,9 +25,9 @@ flip.}
 \value{
 a data frame with the following columns:
 \item{WBIC}{Wisconsin Water Body Identification Code (WBIC) of lake}
-\item{lakename}{name of lake as included in csv filename (will be a single
-                word, e.g. "easthorsehead", just to help with quick
-                identification)}
+\item{lake}{name of lake as included in csv filename (will be a single
+            word, e.g. "easthorsehead", just to help with quick
+            identification)}
 \item{depth_ft}{lake depth (ft)}
 \item{area_acres}{lake area at this lake depth (acres)}
 }
